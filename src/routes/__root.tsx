@@ -1,14 +1,21 @@
 import type { QueryClient } from '@tanstack/react-query'
 import {
   HeadContent,
+  Link,
   Scripts,
   createRootRouteWithContext,
+  type ErrorComponentProps,
 } from '@tanstack/react-router'
 
 import { Header } from '#/components/Header'
 import { currentUserQuery } from '#/lib/current-user'
 
 import appCss from '../styles.css?url'
+
+// Inline, so the browser never requests /favicon.ico. That request would
+// render the 404 page on the server, and with it a current-user lookup.
+const FAVICON =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='4' y='4' width='24' height='24' rx='7' fill='%23b4532a'/%3E%3C/svg%3E"
 
 export interface RouterContext {
   queryClient: QueryClient
@@ -26,9 +33,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { title: 'HAUZ' },
     ],
-    links: [{ rel: 'stylesheet', href: appCss }],
+    links: [
+      { rel: 'icon', href: FAVICON },
+      { rel: 'stylesheet', href: appCss },
+    ],
   }),
   shellComponent: RootDocument,
+  notFoundComponent: NotFoundPage,
+  errorComponent: ErrorPage,
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
@@ -43,5 +55,32 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
+  )
+}
+
+function NotFoundPage() {
+  return (
+    <main>
+      <h1>Page not found</h1>
+      <p className="lede">The page you are looking for doesn't exist or has moved.</p>
+      <Link to="/" className="btn btn-primary btn-inline">
+        Go home
+      </Link>
+    </main>
+  )
+}
+
+// Replaces the router's default, which prints the raw error message on the page.
+function ErrorPage({ error, reset }: ErrorComponentProps) {
+  console.error(error)
+
+  return (
+    <main>
+      <h1>Something went wrong</h1>
+      <p className="lede">Please try again. If it keeps happening, reload the page.</p>
+      <button type="button" className="btn btn-primary btn-inline" onClick={reset}>
+        Try again
+      </button>
+    </main>
   )
 }

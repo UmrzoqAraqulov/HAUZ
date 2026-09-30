@@ -2,16 +2,16 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 
-import { updatePersonalAccount } from '#/server/profile'
+import { saveProfile } from '#/server/profile'
 
 const ROLE_LABELS = { property_owner: 'Property Owner', realtor: 'Realtor' } as const
 
 export const Route = createFileRoute('/profile')({
   beforeLoad: ({ context }) => {
-    if (!context.session) {
+    if (!context.user) {
       throw redirect({ to: '/login', search: { redirect: '/profile' } })
     }
-    if (!context.session.account) {
+    if (!context.user.account) {
       throw redirect({ to: '/onboarding', search: { redirect: '/profile' } })
     }
   },
@@ -19,8 +19,8 @@ export const Route = createFileRoute('/profile')({
 })
 
 function ProfilePage() {
-  const { session } = Route.useRouteContext()
-  const account = session!.account!
+  const { user } = Route.useRouteContext()
+  const account = user!.account!
   const router = useRouter()
 
   const [firstName, setFirstName] = useState(account.firstName)
@@ -55,7 +55,7 @@ function ProfilePage() {
     if (Object.keys(patch).length === 0) return
 
     setPending(true)
-    const result = await updatePersonalAccount({ data: patch })
+    const result = await saveProfile({ data: patch })
     setPending(false)
 
     if (!result.ok) {

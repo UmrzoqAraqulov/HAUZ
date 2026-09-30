@@ -1,33 +1,35 @@
-/**
- * The only code in this app that talks to the personal-account Function.
- * Everything else (routes, forms) goes through the server functions in
- * profile.ts and session.ts, never through this module directly, and the
- * web app never touches the `personal_accounts` table.
- */
-
 import { ExecutionMethod, type Functions } from 'node-appwrite'
 
 import { serverEnv } from '#/lib/env.server'
-import type { ActionResult, PersonalAccount, PersonalAccountRole } from '#/lib/personal-account'
+import type {
+  ActionResult,
+  NewPersonalAccount,
+  PersonalAccount,
+  PersonalAccountChanges,
+} from '#/lib/personal-account'
 
-async function callFunction(functions: Functions, method: ExecutionMethod, body?: unknown) {
+// The only place the web app talks to the personal-account Function. The
+// personal_accounts table itself is never read or written from here.
+
+async function callPersonalAccountFunction(functions: Functions, method: ExecutionMethod, body?: object) {
   const execution = await functions.createExecution({
     functionId: serverEnv.functionId,
-    body: body === undefined ? undefined : JSON.stringify(body),
-    async: false,
     xpath: '/personal-account',
     method,
+    body: body ? JSON.stringify(body) : undefined,
     headers: { 'content-type': 'application/json' },
+    async: false,
   })
 
-  const parsed = execution.responseBody ? JSON.parse(execution.responseBody) : null
-
-  return { status: execution.responseStatusCode, body: parsed }
+  return {
+    status: execution.responseStatusCode,
+    body: execution.responseBody ? JSON.parse(execution.responseBody) : null,
+  }
 }
 
-function toActionResult<T>(status: number, body: unknown, okStatuses: number[]): ActionResult<T> {
-  if (okStatuses.includes(status)) {
-    return { ok: true, data: body as T }
+function toActionResult(status: number, body: unknown): ActionResult<PersonalAccount> {
+  if (status === 200 || status === 201) {
+    return { ok: true, data: body as PersonalAccount }
   }
 
   const errorBody = (body ?? {}) as {
@@ -44,25 +46,21 @@ function toActionResult<T>(status: number, body: unknown, okStatuses: number[]):
   }
 }
 
-export async function fetchPersonalAccount(functions: Functions): Promise<PersonalAccount | null> {
-  const { status, body } = await callFunction(functions, ExecutionMethod.GET)
+// null means the person has not onboarded yet, which is normal.
+export async function getPersonalAccount(functions: Functions): Promise<PersonalAccount | null> {
+  const { status, body } = await callPersonalAccountFunction(functions, ExecutionMethod.GET)
   if (status === 404) return null
   if (status === 200) return body as PersonalAccount
-  throw new Error(`Unexpected personal-account Function response: ${status}`)
+  throw new Error(`personal-account Function answered GET with ${status}`)
 }
 
-export async function submitPersonalAccount(
-  functions: Functions,
-  input: { firstName: string; lastName: string; role: PersonalAccountRole },
-): Promise<ActionResult<PersonalAccount>> {
-  const { status, body } = await callFunction(functions, ExecutionMethod.POST, input)
-  return toActionResult(status, body, [200, 201])
+// Safe to repeat: the Function answers 200 with the existing account instead of creating a second one.
+export async function createPersonalAccount(functions: Functions, account: NewPersonalAccount) {
+  const { status, body } = await callPersonalAccountFunction(functions, ExecutionMethod.POST, account)
+  return toActionResult(status, body)
 }
 
-export async function editPersonalAccount(
-  functions: Functions,
-  input: Partial<{ firstName: string; lastName: string; contactEmail: string | null; bio: string | null }>,
-): Promise<ActionResult<PersonalAccount>> {
-  const { status, body } = await callFunction(functions, ExecutionMethod.PATCH, input)
-  return toActionResult(status, body, [200])
+export async function updatePersonalAccount(functions: Functions, changes: PersonalAccountChanges) {
+  const { status, body } = await callPersonalAccountFunction(functions, ExecutionMethod.PATCH, changes)
+  return toActionResult(status, body)
 }

@@ -5,17 +5,17 @@ import { z } from 'zod'
 
 import { sanitizeRedirectPath } from '#/lib/destination'
 import type { PersonalAccountRole } from '#/lib/personal-account'
-import { createPersonalAccount } from '#/server/profile'
+import { completeOnboarding } from '#/server/profile'
 
 const searchSchema = z.object({ redirect: z.string().optional() })
 
 export const Route = createFileRoute('/onboarding')({
   validateSearch: searchSchema,
   beforeLoad: ({ context, search }) => {
-    if (!context.session) {
+    if (!context.user) {
       throw redirect({ to: '/login', search: { redirect: '/onboarding' } })
     }
-    if (context.session.account) {
+    if (context.user.account) {
       throw redirect({ href: sanitizeRedirectPath(search.redirect) ?? '/' })
     }
   },
@@ -38,7 +38,7 @@ function OnboardingPage() {
 
     setError(null)
     setPending(true)
-    const result = await createPersonalAccount({ data: { firstName, lastName, role } })
+    const result = await completeOnboarding({ data: { firstName, lastName, role } })
 
     if (!result.ok) {
       setPending(false)

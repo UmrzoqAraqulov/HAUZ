@@ -1,27 +1,24 @@
-/**
- * Onboarding and profile edits. Both require a session cookie; neither takes
- * a user id from the caller &mdash; see NOTES.md for why that departs from
- * the brief.
- */
-
 import { createServerFn } from '@tanstack/react-start'
+import type { Functions } from 'node-appwrite'
 import { z } from 'zod'
 
 import { createSessionClient } from '#/lib/appwrite-clients.server'
 import type { ActionResult, PersonalAccount } from '#/lib/personal-account'
 import { readSessionCookie } from '#/lib/session-cookie.server'
-import { editPersonalAccount, submitPersonalAccount } from './personal-account.server'
+import { createPersonalAccount, updatePersonalAccount } from './personal-account.server'
 
-/** Everything below returns a result rather than throwing, so a stale tab or
- * a Function hiccup shows as a message, not a crashed form. */
-async function guarded<T>(run: () => Promise<ActionResult<T>>): Promise<ActionResult<T>> {
-  const secret = readSessionCookie()
-  if (!secret) {
+// The caller is identified only by the session cookie. No user id is taken
+// from the request: the Function reads it from Appwrite, not from the body.
+async function asSignedInUser(
+  action: (functions: Functions) => Promise<ActionResult<PersonalAccount>>,
+): Promise<ActionResult<PersonalAccount>> {
+  const sessionSecret = readSessionCookie()
+  if (!sessionSecret) {
     return { ok: false, status: 401, error: 'unauthorized', message: 'Your session expired. Sign in again.' }
   }
 
   try {
-    return await run()
+    return await action(createSessionClient(sessionSecret).functions)
   } catch (error) {
     return {
       ok: false,
@@ -32,7 +29,7 @@ async function guarded<T>(run: () => Promise<ActionResult<T>>): Promise<ActionRe
   }
 }
 
-export const createPersonalAccount = createServerFn({ method: 'POST' })
+export const completeOnboarding = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       firstName: z.string().trim().min(1).max(100),
@@ -40,14 +37,9 @@ export const createPersonalAccount = createServerFn({ method: 'POST' })
       role: z.enum(['property_owner', 'realtor']),
     }),
   )
-  .handler(({ data }): Promise<ActionResult<PersonalAccount>> =>
-    guarded(() => {
-      const { functions } = createSessionClient(readSessionCookie()!)
-      return submitPersonalAccount(functions, data)
-    }),
-  )
+  .handler(({ data }) => asSignedInUser((functions) => createPersonalAccount(functions, data)))
 
-export const updatePersonalAccount = createServerFn({ method: 'POST' })
+export const saveProfile = createServerFn({ method: 'POST' })
   .validator(
     z.object({
       firstName: z.string().trim().min(1).max(100).optional(),
@@ -56,9 +48,4 @@ export const updatePersonalAccount = createServerFn({ method: 'POST' })
       bio: z.string().nullable().optional(),
     }),
   )
-  .handler(({ data }): Promise<ActionResult<PersonalAccount>> =>
-    guarded(() => {
-      const { functions } = createSessionClient(readSessionCookie()!)
-      return editPersonalAccount(functions, data)
-    }),
-  )
+  .handler(({ data }) => asSignedInUser((functions) => updatePersonalAccount(functions, data)))

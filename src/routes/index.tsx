@@ -3,14 +3,14 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 export const Route = createFileRoute('/')({ component: Home })
 
 function Home() {
-  const { session } = Route.useRouteContext()
+  const { user } = Route.useRouteContext()
 
   return (
     <main>
       <h1>HAUZ</h1>
-      {session ? (
+      {user ? (
         <>
-          <p className="lede">Signed in as {session.account?.firstName ?? session.email}.</p>
+          <p className="lede">Signed in as {user.account?.firstName ?? user.email}.</p>
           <Link to="/profile" className="btn btn-primary btn-inline">
             View your profile
           </Link>

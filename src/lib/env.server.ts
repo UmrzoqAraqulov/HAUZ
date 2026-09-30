@@ -1,15 +1,9 @@
-/**
- * Server-only environment. Importing this from client code is a bug: it would
- * either crash the bundler (no `process.env` in the browser) or, worse, leak
- * these values into the client bundle.
- */
+// Server-only: these values must never reach the browser bundle.
 
 function required(name: string): string {
   const value = process.env[name]
   if (!value) {
-    throw new Error(
-      `Missing ${name}. Copy .env.example to .env and fill it in (see README.md).`,
-    )
+    throw new Error(`Missing ${name}. Copy .env.example to .env and fill it in (see README.md).`)
   }
   return value
 }

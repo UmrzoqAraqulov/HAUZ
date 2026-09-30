@@ -1,9 +1,9 @@
 import { Link, useRouter } from '@tanstack/react-router'
 
-import type { Session } from '#/server/session'
+import type { CurrentUser } from '#/server/session'
 import { logout } from '#/server/session'
 
-export function Header({ session }: { session: Session | null }) {
+export function Header({ user }: { user: CurrentUser | null }) {
   const router = useRouter()
 
   async function handleLogout() {
@@ -17,9 +17,9 @@ export function Header({ session }: { session: Session | null }) {
       <Link to="/" className="brand">
         HAUZ
       </Link>
-      {session ? (
+      {user ? (
         <div className="header-actions">
-          <span className="header-user">{session.account?.firstName ?? session.email}</span>
+          <span className="header-user">{user.account?.firstName ?? user.email}</span>
           <button type="button" className="btn btn-small" onClick={handleLogout}>
             Log out
           </button>

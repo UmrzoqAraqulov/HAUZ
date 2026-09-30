@@ -1,4 +1,4 @@
-import type { Session } from '#/server/session'
+import type { CurrentUser } from '#/server/session'
 
 const PLACEHOLDER_ORIGIN = 'http://redirect.invalid'
 
@@ -18,10 +18,10 @@ export function sanitizeRedirectPath(path: string | undefined): string | undefin
 
 // Someone without a Personal Account goes through onboarding first, and the
 // redirect is carried along so they still end up where they were headed.
-export function getPathAfterSignIn(session: Session, redirectTo?: string): string {
+export function getPathAfterSignIn(user: CurrentUser, redirectTo?: string): string {
   const redirectPath = sanitizeRedirectPath(redirectTo)
 
-  if (!session.account) {
+  if (!user.account) {
     return redirectPath ? `/onboarding?redirect=${encodeURIComponent(redirectPath)}` : '/onboarding'
   }
   return redirectPath ?? '/'

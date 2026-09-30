@@ -4,15 +4,15 @@ import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 
 import { getPathAfterSignIn } from '#/lib/destination'
-import { requestEmailCode, verifyEmailCode } from '#/server/session'
+import { sendEmailCode, verifyEmailCode } from '#/server/session'
 
 const searchSchema = z.object({ redirect: z.string().optional() })
 
 export const Route = createFileRoute('/login')({
   validateSearch: searchSchema,
   beforeLoad: ({ context, search }) => {
-    if (context.session) {
-      throw redirect({ href: getPathAfterSignIn(context.session, search.redirect) })
+    if (context.user) {
+      throw redirect({ href: getPathAfterSignIn(context.user, search.redirect) })
     }
   },
   component: LoginPage,
@@ -33,7 +33,7 @@ function LoginPage() {
     event.preventDefault()
     setError(null)
     setPending(true)
-    const result = await requestEmailCode({ data: { email } })
+    const result = await sendEmailCode({ data: { email } })
     setPending(false)
 
     if (!result.ok) {
@@ -49,7 +49,7 @@ function LoginPage() {
     event.preventDefault()
     setError(null)
     setPending(true)
-    const result = await verifyEmailCode({ data: { userId, secret: code } })
+    const result = await verifyEmailCode({ data: { userId, code } })
     setPending(false)
 
     if (!result.ok) {

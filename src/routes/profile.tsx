@@ -79,6 +79,7 @@ function ProfileForm({ account, signInEmail }: { account: PersonalAccount; signI
   function setField(field: keyof FormValues) {
     return (value: string) => {
       setValues((current) => ({ ...current, [field]: value }))
+      setFieldErrors((errors) => ({ ...errors, [field]: undefined }))
       setSaved(false)
     }
   }

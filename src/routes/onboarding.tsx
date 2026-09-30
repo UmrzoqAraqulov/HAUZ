@@ -49,6 +49,10 @@ function OnboardingPage() {
   // get through. The Function is idempotent too, so this is the second guard.
   const submitting = useRef(false)
 
+  function clearFieldError(field: string) {
+    setFieldErrors((errors) => ({ ...errors, [field]: undefined }))
+  }
+
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     if (submitting.current) return
@@ -91,7 +95,10 @@ function OnboardingPage() {
             id="firstName"
             label="First name"
             value={firstName}
-            onChange={setFirstName}
+            onChange={(value) => {
+              setFirstName(value)
+              clearFieldError('firstName')
+            }}
             error={fieldErrors.firstName}
             maxLength={100}
             autoComplete="given-name"
@@ -101,7 +108,10 @@ function OnboardingPage() {
             id="lastName"
             label="Last name"
             value={lastName}
-            onChange={setLastName}
+            onChange={(value) => {
+              setLastName(value)
+              clearFieldError('lastName')
+            }}
             error={fieldErrors.lastName}
             maxLength={100}
             autoComplete="family-name"
@@ -118,7 +128,10 @@ function OnboardingPage() {
                   name="role"
                   value={value}
                   checked={role === value}
-                  onChange={() => setRole(value)}
+                  onChange={() => {
+                    setRole(value)
+                    clearFieldError('role')
+                  }}
                 />
                 <span className="role-option-title">{ROLE_LABELS[value]}</span>
                 <span className="role-option-description">{ROLE_DESCRIPTIONS[value]}</span>

@@ -40,7 +40,13 @@ export function Header() {
                 Couldn't log out. Try again.
               </span>
             )}
-            <span className="header-user">{user.account?.firstName ?? user.email}</span>
+            {user.account ? (
+              <Link to="/profile" className="header-user">
+                {user.account.firstName}
+              </Link>
+            ) : (
+              <span className="header-user">{user.email}</span>
+            )}
             <button type="button" className="btn btn-small" onClick={handleLogout} disabled={loggingOut}>
               {loggingOut ? 'Logging out…' : 'Log out'}
             </button>

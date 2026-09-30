@@ -23,14 +23,3 @@ export type NewPersonalAccount = Pick<PersonalAccount, 'firstName' | 'lastName' 
 
 // A field left out keeps its stored value; null clears it.
 export type PersonalAccountChanges = Partial<Pick<PersonalAccount, 'firstName' | 'lastName' | 'contactEmail' | 'bio'>>
-
-export interface FunctionErrorBody {
-  error: string
-  message: string
-  issues?: { field: string; message: string }[]
-}
-
-// Returned instead of thrown, so forms can show a message.
-export type ActionResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; status: number; error: string; message: string; issues?: FunctionErrorBody['issues'] }

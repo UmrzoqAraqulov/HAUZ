@@ -2,10 +2,13 @@ import { createServerFn } from '@tanstack/react-start'
 import type { Functions } from 'node-appwrite'
 import { z } from 'zod'
 
-import { createSessionClient } from '#/lib/appwrite-clients.server'
-import type { ActionResult, PersonalAccount } from '#/lib/personal-account'
-import { readSessionCookie } from '#/lib/session-cookie.server'
+import { failure, unexpectedFailure, type ActionResult } from '#/lib/action-result'
+import { createSessionClient, hasAppwriteStatus } from '#/lib/appwrite-clients.server'
+import type { PersonalAccount } from '#/lib/personal-account'
+import { clearSessionCookie, readSessionCookie } from '#/lib/session-cookie.server'
 import { createPersonalAccount, updatePersonalAccount } from './personal-account.server'
+
+const SESSION_EXPIRED = failure('unauthorized', 'Your session has expired. Please sign in again.')
 
 // The caller is identified only by the session cookie. No user id is taken
 // from the request: the Function reads it from Appwrite, not from the body.
@@ -13,19 +16,20 @@ async function asSignedInUser(
   action: (functions: Functions) => Promise<ActionResult<PersonalAccount>>,
 ): Promise<ActionResult<PersonalAccount>> {
   const sessionSecret = readSessionCookie()
-  if (!sessionSecret) {
-    return { ok: false, status: 401, error: 'unauthorized', message: 'Your session expired. Sign in again.' }
-  }
+  if (!sessionSecret) return SESSION_EXPIRED
 
   try {
-    return await action(createSessionClient(sessionSecret).functions)
+    const result = await action(createSessionClient(sessionSecret).functions)
+    if (!result.ok && result.error === 'unauthorized') clearSessionCookie()
+    return result
   } catch (error) {
-    return {
-      ok: false,
-      status: 500,
-      error: 'internal_error',
-      message: error instanceof Error ? error.message : 'Something went wrong. Try again.',
+    // A dead session reaches Appwrite as a guest, and "Execute access: users"
+    // turns guests away before the Function even runs.
+    if (hasAppwriteStatus(error, 401)) {
+      clearSessionCookie()
+      return SESSION_EXPIRED
     }
+    return unexpectedFailure('Calling the personal-account Function failed', error)
   }
 }
 

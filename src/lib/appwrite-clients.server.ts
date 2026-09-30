@@ -1,4 +1,4 @@
-import { Account, Client, Functions } from 'node-appwrite'
+import { Account, AppwriteException, Client, Functions } from 'node-appwrite'
 
 import { serverEnv } from './env.server'
 
@@ -17,4 +17,8 @@ export function createAdminClient() {
 export function createSessionClient(sessionSecret: string) {
   const client = createBaseClient().setSession(sessionSecret)
   return { account: new Account(client), functions: new Functions(client) }
+}
+
+export function hasAppwriteStatus(error: unknown, ...statuses: number[]): boolean {
+  return error instanceof AppwriteException && statuses.includes(error.code)
 }

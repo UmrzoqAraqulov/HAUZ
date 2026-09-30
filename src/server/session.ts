@@ -2,8 +2,9 @@ import { createServerFn } from '@tanstack/react-start'
 import { ID } from 'node-appwrite'
 import { z } from 'zod'
 
-import { createAdminClient, createSessionClient } from '#/lib/appwrite-clients.server'
-import type { ActionResult, PersonalAccount } from '#/lib/personal-account'
+import { failure, unexpectedFailure, type ActionResult } from '#/lib/action-result'
+import { createAdminClient, createSessionClient, hasAppwriteStatus } from '#/lib/appwrite-clients.server'
+import type { PersonalAccount } from '#/lib/personal-account'
 import { clearSessionCookie, readSessionCookie, writeSessionCookie } from '#/lib/session-cookie.server'
 import { getPersonalAccount } from './personal-account.server'
 
@@ -14,6 +15,8 @@ export interface CurrentUser {
   account: PersonalAccount | null
 }
 
+const TOO_MANY_ATTEMPTS = failure('rate_limited', 'Too many attempts. Please wait a minute and try again.')
+
 // Takes the secret as an argument rather than reading the cookie: a cookie
 // set earlier in the same request is not visible to getCookie yet.
 async function loadCurrentUser(sessionSecret: string): Promise<CurrentUser | null> {
@@ -21,7 +24,8 @@ async function loadCurrentUser(sessionSecret: string): Promise<CurrentUser | nul
     const { account, functions } = createSessionClient(sessionSecret)
     const user = await account.get()
     return { userId: user.$id, email: user.email, account: await getPersonalAccount(functions) }
-  } catch {
+  } catch (error) {
+    console.error('Could not load the current user:', error instanceof Error ? error.message : error)
     return null
   }
 }
@@ -46,12 +50,9 @@ export const sendEmailCode = createServerFn({ method: 'POST' })
       const token = await account.createEmailToken({ userId: ID.unique(), email: data.email })
       return { ok: true, data: { userId: token.userId } }
     } catch (error) {
-      return {
-        ok: false,
-        status: 500,
-        error: 'send_failed',
-        message: error instanceof Error ? error.message : 'Could not send the code. Try again.',
-      }
+      if (hasAppwriteStatus(error, 429)) return TOO_MANY_ATTEMPTS
+      if (hasAppwriteStatus(error, 400)) return failure('invalid_email', 'Enter a valid email address.')
+      return unexpectedFailure('Sending the email code failed', error)
     }
   })
 
@@ -63,19 +64,19 @@ export const verifyEmailCode = createServerFn({ method: 'POST' })
       const { account } = createAdminClient()
       session = await account.createSession({ userId: data.userId, secret: data.code })
     } catch (error) {
-      return {
-        ok: false,
-        status: 401,
-        error: 'invalid_code',
-        message: error instanceof Error ? error.message : 'That code is wrong or expired.',
+      if (hasAppwriteStatus(error, 429)) return TOO_MANY_ATTEMPTS
+      if (hasAppwriteStatus(error, 400, 401, 404)) {
+        return failure('invalid_code', 'That code is wrong or has expired.')
       }
+      return unexpectedFailure('Verifying the email code failed', error)
     }
 
     writeSessionCookie(session.secret, session.expire)
 
     const user = await loadCurrentUser(session.secret)
     if (!user) {
-      return { ok: false, status: 500, error: 'internal_error', message: 'Signed in, but could not load the account.' }
+      clearSessionCookie()
+      return failure('unexpected', 'You were signed in, but we could not load your account. Please try again.')
     }
     return { ok: true, data: user }
   })

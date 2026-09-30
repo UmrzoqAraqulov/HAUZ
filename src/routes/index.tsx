@@ -1,9 +1,11 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/')({ component: Home })
+import { useCurrentUser } from '#/lib/current-user'
 
-function Home() {
-  const { user } = Route.useRouteContext()
+export const Route = createFileRoute('/')({ component: HomePage })
+
+function HomePage() {
+  const user = useCurrentUser()
 
   return (
     <main>

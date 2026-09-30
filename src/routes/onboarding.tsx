@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 
+import { useCurrentUserCache } from '#/lib/current-user'
 import { sanitizeRedirectPath } from '#/lib/destination'
 import type { PersonalAccountRole } from '#/lib/personal-account'
 import { completeOnboarding } from '#/server/profile'
@@ -24,7 +25,8 @@ export const Route = createFileRoute('/onboarding')({
 
 function OnboardingPage() {
   const search = Route.useSearch()
-  const router = useRouter()
+  const navigate = useNavigate()
+  const currentUserCache = useCurrentUserCache()
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -46,8 +48,8 @@ function OnboardingPage() {
       return
     }
 
-    await router.invalidate()
-    await router.navigate({ href: sanitizeRedirectPath(search.redirect) ?? '/' })
+    currentUserCache.setAccount(result.data)
+    await navigate({ href: sanitizeRedirectPath(search.redirect) ?? '/' })
   }
 
   return (

@@ -1,15 +1,29 @@
-import { Link, useRouter } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
 
-import type { CurrentUser } from '#/server/session'
+import { useCurrentUser, useCurrentUserCache } from '#/lib/current-user'
 import { logout } from '#/server/session'
 
-export function Header({ user }: { user: CurrentUser | null }) {
-  const router = useRouter()
+export function Header() {
+  const user = useCurrentUser()
+  const currentUserCache = useCurrentUserCache()
+  const navigate = useNavigate()
+  const [loggingOut, setLoggingOut] = useState(false)
+  const [logoutFailed, setLogoutFailed] = useState(false)
 
   async function handleLogout() {
-    await logout()
-    await router.invalidate()
-    await router.navigate({ to: '/' })
+    setLoggingOut(true)
+    setLogoutFailed(false)
+    try {
+      await logout()
+      currentUserCache.set(null)
+      await navigate({ to: '/' })
+    } catch {
+      // Keep showing them as signed in: the cookie may still be valid.
+      setLogoutFailed(true)
+    } finally {
+      setLoggingOut(false)
+    }
   }
 
   return (
@@ -17,18 +31,26 @@ export function Header({ user }: { user: CurrentUser | null }) {
       <Link to="/" className="brand">
         HAUZ
       </Link>
-      {user ? (
-        <div className="header-actions">
-          <span className="header-user">{user.account?.firstName ?? user.email}</span>
-          <button type="button" className="btn btn-small" onClick={handleLogout}>
-            Log out
-          </button>
-        </div>
-      ) : (
-        <Link to="/login" className="btn btn-small">
-          Sign in
-        </Link>
-      )}
+
+      <nav className="header-actions">
+        {user ? (
+          <>
+            {logoutFailed && (
+              <span className="header-error" role="alert">
+                Couldn't log out. Try again.
+              </span>
+            )}
+            <span className="header-user">{user.account?.firstName ?? user.email}</span>
+            <button type="button" className="btn btn-small" onClick={handleLogout} disabled={loggingOut}>
+              {loggingOut ? 'Logging out…' : 'Log out'}
+            </button>
+          </>
+        ) : (
+          <Link to="/login" className="btn btn-small">
+            Sign in
+          </Link>
+        )}
+      </nav>
     </header>
   )
 }

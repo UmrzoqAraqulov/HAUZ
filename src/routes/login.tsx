@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 
+import { useCurrentUserCache } from '#/lib/current-user'
 import { getPathAfterSignIn } from '#/lib/destination'
 import { sendEmailCode, verifyEmailCode } from '#/server/session'
 
@@ -20,7 +21,8 @@ export const Route = createFileRoute('/login')({
 
 function LoginPage() {
   const search = Route.useSearch()
-  const router = useRouter()
+  const navigate = useNavigate()
+  const currentUserCache = useCurrentUserCache()
 
   const [stage, setStage] = useState<'email' | 'code'>('email')
   const [email, setEmail] = useState('')
@@ -57,8 +59,8 @@ function LoginPage() {
       return
     }
 
-    await router.invalidate()
-    await router.navigate({ href: getPathAfterSignIn(result.data, search.redirect) })
+    currentUserCache.set(result.data)
+    await navigate({ href: getPathAfterSignIn(result.data, search.redirect) })
   }
 
   if (stage === 'email') {

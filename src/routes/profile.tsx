@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
+import { useCurrentUser, useCurrentUserCache } from '#/lib/current-user'
+import { ROLE_LABELS, type PersonalAccount } from '#/lib/personal-account'
 import { saveProfile } from '#/server/profile'
-
-const ROLE_LABELS = { property_owner: 'Property Owner', realtor: 'Realtor' } as const
 
 export const Route = createFileRoute('/profile')({
   beforeLoad: ({ context }) => {
@@ -19,9 +19,14 @@ export const Route = createFileRoute('/profile')({
 })
 
 function ProfilePage() {
-  const { user } = Route.useRouteContext()
-  const account = user!.account!
-  const router = useRouter()
+  const user = useCurrentUser()
+  // The route guard guarantees an account; it only goes away mid-logout.
+  if (!user?.account) return null
+  return <ProfileForm account={user.account} />
+}
+
+function ProfileForm({ account }: { account: PersonalAccount }) {
+  const currentUserCache = useCurrentUserCache()
 
   const [firstName, setFirstName] = useState(account.firstName)
   const [lastName, setLastName] = useState(account.lastName)
@@ -63,8 +68,8 @@ function ProfilePage() {
       return
     }
 
+    currentUserCache.setAccount(result.data)
     setSaved(true)
-    await router.invalidate()
   }
 
   return (

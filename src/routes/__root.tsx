@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-router'
 
 import { Header } from '#/components/Header'
-import { getCurrentUser } from '#/server/session'
+import { currentUserQuery } from '#/lib/current-user'
 
 import appCss from '../styles.css?url'
 
@@ -15,10 +15,11 @@ export interface RouterContext {
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-  beforeLoad: async () => {
-    const user = await getCurrentUser()
-    return { user }
-  },
+  // Runs on the server for the first paint (so the header is right after a
+  // hard refresh) and before every client navigation, where the cache answers.
+  beforeLoad: async ({ context }) => ({
+    user: await context.queryClient.fetchQuery(currentUserQuery),
+  }),
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -31,15 +32,13 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { user } = Route.useRouteContext()
-
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        <Header user={user} />
+        <Header />
         {children}
         <Scripts />
       </body>

@@ -68,7 +68,8 @@ cp .env.example .env
 ```
 
 Fill in `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID` and `APPWRITE_API_KEY`.
-`.env` is git-ignored. Do not commit it.
+Keep `APPWRITE_FUNCTION_ID=personal-account` as it is: without it every sign-in
+fails to load the account. `.env` is git-ignored. Do not commit it.
 
 ### 6. Run it
 
@@ -81,13 +82,35 @@ http://localhost:3000
 ## What is in here
 
 ```
-src/                          the app you are building; it is empty on purpose
-  router.tsx                  router setup
-  routes/__root.tsx           the document shell
-  routes/index.tsx            placeholder home page
-functions/personal-account/   the Function, already written
-appwrite.config.json          database, table and Function definitions
+src/
+  router.tsx                     router setup; one QueryClient per request
+  routes/
+    __root.tsx                   document shell, header, 404 and error pages;
+                                 loads the signed-in user before any page renders
+    index.tsx                    home
+    login.tsx                    sign in with an email code
+    onboarding.tsx               name and role for someone without a Personal Account
+    profile.tsx                  view and edit the Personal Account
+  components/                    Header, TextField
+  lib/
+    current-user.ts              the signed-in user, cached with TanStack Query
+    schemas.ts                   input rules shared by the forms and server functions
+    destination.ts               where to go after sign-in; sanitizes ?redirect
+    personal-account.ts          Personal Account types and role labels
+    action-result.ts             the result type server functions return
+    *.server.ts                  server only: env, Appwrite clients, session cookie
+  server/
+    session.ts                   server functions: current user, send and verify
+                                 the email code, log out
+    profile.ts                   server functions: complete onboarding, save profile
+    personal-account.server.ts   the only code that calls the personal-account Function
+functions/personal-account/      the Function, unchanged
+appwrite.config.json             database, table and Function definitions
 ```
+
+Files ending in `.server.ts` are refused by the build if anything in the
+browser bundle imports them, so the API key and session secret cannot leak
+there. The server functions in `src/server/*.ts` are the only bridge.
 
 Other scripts:
 

@@ -1,4 +1,5 @@
 import { queryOptions, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 
 import type { PersonalAccount } from '#/lib/personal-account'
 import { getCurrentUser, type CurrentUser } from '#/server/session'
@@ -28,5 +29,17 @@ export function useCurrentUserCache() {
     setAccount(account: PersonalAccount) {
       queryClient.setQueryData(currentUserQuery.queryKey, (user) => (user ? { ...user, account } : user))
     },
+  }
+}
+
+// For when a save reports the session is gone: forget the user and send
+// them to sign in, returning to the same page afterwards.
+export function useSendToSignIn() {
+  const currentUserCache = useCurrentUserCache()
+  const navigate = useNavigate()
+
+  return (returnTo: string) => {
+    currentUserCache.set(null)
+    return navigate({ to: '/login', search: { redirect: returnTo } })
   }
 }

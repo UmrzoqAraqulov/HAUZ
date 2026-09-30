@@ -19,3 +19,14 @@ export function unexpectedFailure(context: string, error: unknown): ActionFailur
   console.error(`${context}:`, error instanceof Error ? error.message : error)
   return failure('unexpected', GENERIC_ERROR_MESSAGE)
 }
+
+// Calling a server function can still throw in the browser: the network is
+// down, or its validator rejected the input. Forms await this instead, so a
+// thrown call becomes a normal failure and never leaves a button stuck.
+export async function resultOf<T>(call: Promise<ActionResult<T>>): Promise<ActionResult<T>> {
+  try {
+    return await call
+  } catch {
+    return failure('network', "We couldn't reach the server. Check your connection and try again.")
+  }
+}

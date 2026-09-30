@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { failure, unexpectedFailure, type ActionResult } from '#/lib/action-result'
 import { createAdminClient, createSessionClient, hasAppwriteStatus } from '#/lib/appwrite-clients.server'
 import type { PersonalAccount } from '#/lib/personal-account'
+import { codeSchema, emailSchema } from '#/lib/schemas'
 import { clearSessionCookie, readSessionCookie, writeSessionCookie } from '#/lib/session-cookie.server'
 import { getPersonalAccount } from './personal-account.server'
 
@@ -42,7 +43,7 @@ export const getCurrentUser = createServerFn({ method: 'GET' }).handler(async ()
 })
 
 export const sendEmailCode = createServerFn({ method: 'POST' })
-  .validator(z.object({ email: z.email() }))
+  .validator(z.object({ email: emailSchema }))
   .handler(async ({ data }): Promise<ActionResult<{ userId: string }>> => {
     try {
       const { account } = createAdminClient()
@@ -57,7 +58,7 @@ export const sendEmailCode = createServerFn({ method: 'POST' })
   })
 
 export const verifyEmailCode = createServerFn({ method: 'POST' })
-  .validator(z.object({ userId: z.string().min(1), code: z.string().min(1) }))
+  .validator(z.object({ userId: z.string().min(1), code: codeSchema }))
   .handler(async ({ data }): Promise<ActionResult<CurrentUser>> => {
     let session: { secret: string; expire: string }
     try {

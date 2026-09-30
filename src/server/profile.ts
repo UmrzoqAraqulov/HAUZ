@@ -1,10 +1,10 @@
 import { createServerFn } from '@tanstack/react-start'
 import type { Functions } from 'node-appwrite'
-import { z } from 'zod'
 
 import { failure, unexpectedFailure, type ActionResult } from '#/lib/action-result'
 import { createSessionClient, hasAppwriteStatus } from '#/lib/appwrite-clients.server'
 import type { PersonalAccount } from '#/lib/personal-account'
+import { onboardingSchema, profileChangesSchema } from '#/lib/schemas'
 import { clearSessionCookie, readSessionCookie } from '#/lib/session-cookie.server'
 import { createPersonalAccount, updatePersonalAccount } from './personal-account.server'
 
@@ -34,22 +34,9 @@ async function asSignedInUser(
 }
 
 export const completeOnboarding = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      firstName: z.string().trim().min(1).max(100),
-      lastName: z.string().trim().min(1).max(100),
-      role: z.enum(['property_owner', 'realtor']),
-    }),
-  )
+  .validator(onboardingSchema)
   .handler(({ data }) => asSignedInUser((functions) => createPersonalAccount(functions, data)))
 
 export const saveProfile = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      firstName: z.string().trim().min(1).max(100).optional(),
-      lastName: z.string().trim().min(1).max(100).optional(),
-      contactEmail: z.string().nullable().optional(),
-      bio: z.string().nullable().optional(),
-    }),
-  )
+  .validator(profileChangesSchema)
   .handler(({ data }) => asSignedInUser((functions) => updatePersonalAccount(functions, data)))

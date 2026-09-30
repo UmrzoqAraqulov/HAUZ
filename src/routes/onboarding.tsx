@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 
-import { safePath } from '#/lib/destination'
+import { sanitizeRedirectPath } from '#/lib/destination'
 import type { PersonalAccountRole } from '#/lib/personal-account'
 import { createPersonalAccount } from '#/server/profile'
 
@@ -16,7 +16,7 @@ export const Route = createFileRoute('/onboarding')({
       throw redirect({ to: '/login', search: { redirect: '/onboarding' } })
     }
     if (context.session.account) {
-      throw redirect({ href: safePath(search.redirect) ?? '/' })
+      throw redirect({ href: sanitizeRedirectPath(search.redirect) ?? '/' })
     }
   },
   component: OnboardingPage,
@@ -47,7 +47,7 @@ function OnboardingPage() {
     }
 
     await router.invalidate()
-    await router.navigate({ href: safePath(search.redirect) ?? '/' })
+    await router.navigate({ href: sanitizeRedirectPath(search.redirect) ?? '/' })
   }
 
   return (

@@ -1,24 +1,28 @@
 import type { Session } from '#/server/session'
 
-/**
- * Only ever trust `redirect` as an in-app path. It comes from a query
- * parameter, so without this a value like `?redirect=https://evil.example`
- * would send a just-signed-in visitor straight off the site.
- */
-export function safePath(path: string | undefined): string | undefined {
-  if (!path) return undefined
-  return path.startsWith('/') && !path.startsWith('//') ? path : undefined
+const PLACEHOLDER_ORIGIN = 'http://redirect.invalid'
+
+// `redirect` comes from the URL, so only a path on this site is accepted.
+// Parsing it (instead of checking the first characters) also rejects values
+// like "/\evil.com", which browsers read as "//evil.com".
+export function sanitizeRedirectPath(path: string | undefined): string | undefined {
+  if (!path?.startsWith('/')) return undefined
+
+  try {
+    const url = new URL(path, PLACEHOLDER_ORIGIN)
+    return url.origin === PLACEHOLDER_ORIGIN ? url.pathname + url.search + url.hash : undefined
+  } catch {
+    return undefined
+  }
 }
 
-/**
- * Where to send someone once they have a session: onboarding if they have no
- * Personal Account yet (carrying the original `redirect` along so it is not
- * lost), otherwise wherever `redirect` named, otherwise home.
- */
-export function destinationAfterAuth(session: Session, redirectTo?: string): string {
-  const target = safePath(redirectTo)
+// Someone without a Personal Account goes through onboarding first, and the
+// redirect is carried along so they still end up where they were headed.
+export function getPathAfterSignIn(session: Session, redirectTo?: string): string {
+  const redirectPath = sanitizeRedirectPath(redirectTo)
+
   if (!session.account) {
-    return target ? `/onboarding?redirect=${encodeURIComponent(target)}` : '/onboarding'
+    return redirectPath ? `/onboarding?redirect=${encodeURIComponent(redirectPath)}` : '/onboarding'
   }
-  return target ?? '/'
+  return redirectPath ?? '/'
 }

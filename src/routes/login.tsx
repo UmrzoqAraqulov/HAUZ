@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { createFileRoute, redirect, useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 
-import { destinationAfterAuth } from '#/lib/destination'
+import { getPathAfterSignIn } from '#/lib/destination'
 import { requestEmailCode, verifyEmailCode } from '#/server/session'
 
 const searchSchema = z.object({ redirect: z.string().optional() })
@@ -12,7 +12,7 @@ export const Route = createFileRoute('/login')({
   validateSearch: searchSchema,
   beforeLoad: ({ context, search }) => {
     if (context.session) {
-      throw redirect({ href: destinationAfterAuth(context.session, search.redirect) })
+      throw redirect({ href: getPathAfterSignIn(context.session, search.redirect) })
     }
   },
   component: LoginPage,
@@ -58,7 +58,7 @@ function LoginPage() {
     }
 
     await router.invalidate()
-    await router.navigate({ href: destinationAfterAuth(result.data, search.redirect) })
+    await router.navigate({ href: getPathAfterSignIn(result.data, search.redirect) })
   }
 
   if (stage === 'email') {

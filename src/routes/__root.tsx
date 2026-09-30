@@ -27,6 +27,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ context }) => ({
     user: await context.queryClient.fetchQuery(currentUserQuery),
   }),
+  // Every page shows the signed-in person in the header, so no shared cache
+  // (a CDN or proxy) may store a page and serve it to someone else.
+  headers: () => ({ 'Cache-Control': 'private, no-store' }),
   head: () => ({
     meta: [
       { charSet: 'utf-8' },

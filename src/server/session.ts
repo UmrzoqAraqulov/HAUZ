@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { setResponseHeader } from '@tanstack/react-start/server'
 import { ID } from 'node-appwrite'
 import { z } from 'zod'
 
@@ -32,6 +33,9 @@ async function loadCurrentUser(sessionSecret: string): Promise<CurrentUser | nul
 }
 
 export const getCurrentUser = createServerFn({ method: 'GET' }).handler(async () => {
+  // A GET that answers with personal data: no shared cache may keep it.
+  setResponseHeader('Cache-Control', 'private, no-store')
+
   const sessionSecret = readSessionCookie()
   if (!sessionSecret) return null
 

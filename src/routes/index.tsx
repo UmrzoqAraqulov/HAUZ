@@ -1,16 +1,28 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/')({ component: Home })
 
 function Home() {
+  const { session } = Route.useRouteContext()
+
   return (
     <main>
       <h1>HAUZ</h1>
-      <p>
-        Nothing is built yet. Read <code>TASK.md</code> for what to build and{' '}
-        <code>README.md</code> for how to connect this to your own Appwrite
-        project.
-      </p>
+      {session ? (
+        <>
+          <p className="lede">Signed in as {session.account?.firstName ?? session.email}.</p>
+          <Link to="/profile" className="btn btn-primary btn-inline">
+            View your profile
+          </Link>
+        </>
+      ) : (
+        <>
+          <p className="lede">Sign in to view and edit your profile.</p>
+          <Link to="/login" className="btn btn-primary btn-inline">
+            Sign in
+          </Link>
+        </>
+      )}
     </main>
   )
 }

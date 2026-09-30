@@ -5,6 +5,9 @@ import {
   createRootRouteWithContext,
 } from '@tanstack/react-router'
 
+import { Header } from '#/components/Header'
+import { getSession } from '#/server/session'
+
 import appCss from '../styles.css?url'
 
 export interface RouterContext {
@@ -12,6 +15,10 @@ export interface RouterContext {
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: async () => {
+    const session = await getSession()
+    return { session }
+  },
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
@@ -24,13 +31,15 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const { session } = Route.useRouteContext()
+
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        {/* The site header belongs here. See TASK.md. */}
+        <Header session={session} />
         {children}
         <Scripts />
       </body>
